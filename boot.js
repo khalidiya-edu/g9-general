@@ -9,7 +9,7 @@
     const db = await idb(), m = location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
     if (m){ await put(db, b64(m[1])); history.replaceState(null, '', location.pathname); }
     else if (!(await get(db))) return fail('الرابط غير مكتمل', 'استخدم الرابط الكامل الذي أعطاك إياه معلمك (أو امسح رمز QR من جديد).');
-    const reg = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready;
+    const reg = await navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}); try { reg.update(); } catch (e) {} await navigator.serviceWorker.ready;
     if (reg.active) reg.active.postMessage('reload-key');
     if (!navigator.serviceWorker.controller) await new Promise(r => { navigator.serviceWorker.addEventListener('controllerchange', r, {once: true}); setTimeout(r, 2500); });
     const r = await fetch('index.html', {cache: 'no-store'}), t = r.ok ? await r.text() : '';

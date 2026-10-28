@@ -23,7 +23,7 @@ self.addEventListener('fetch', e => {
 async function plain(p){
   const key = await loadKey(); if (!key) return null; const url = BASE + 'enc/' + await hashPath(p) + '.bin';
   const cache = await caches.open(CACHE); let r = null;
-  try { r = await fetch(url); if (r.ok) cache.put(url, r.clone()); else if (r.status === 404) { r = null; await cache.delete(url); return 404; } else r = null; } catch (x) { r = null; }
+  try { r = await fetch(url, {cache: 'no-cache'}); if (r.ok) cache.put(url, r.clone()); else if (r.status === 404) { r = null; await cache.delete(url); return 404; } else r = null; } catch (x) { r = null; }
   if (!r) r = await cache.match(url);                      // offline: what the student opened before
   if (!r) return 404;
   const tag = r.headers.get('etag') || r.headers.get('last-modified') || '';

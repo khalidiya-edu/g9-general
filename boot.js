@@ -1,7 +1,7 @@
 (async function(){
   const $ = id => document.getElementById(id), fail = (h, p) => { $('c').classList.add('e'); $('h').textContent = h; $('p').textContent = p; };
   const b64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
-  const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sec', 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sec:' + new URL('./', location.href).pathname, 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   const get = db => new Promise(res => { const q = db.transaction('k').objectStore('k').get('key'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); });
   const put = (db, v) => new Promise((res, rej) => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').put(v, 'key'); t.oncomplete = res; t.onerror = () => rej(t.error); });
   try {

@@ -6,7 +6,7 @@ const MIME = {html: 'text/html; charset=utf-8', js: 'text/javascript; charset=ut
   woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', mp3: 'audio/mpeg', mp4: 'video/mp4', pdf: 'application/pdf', txt: 'text/plain; charset=utf-8', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', doc: 'application/msword', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
 let KEY = null, last = {url: '', buf: null, tag: ''};
-const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sec', 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sec:' + new URL('./', location.href).pathname, 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 async function loadKey(){
   if (KEY) return KEY; const db = await idb(), raw = await new Promise(res => { const q = db.transaction('k').objectStore('k').get('key'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); });
   if (!raw) return null; KEY = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); return KEY;
@@ -14,7 +14,7 @@ async function loadKey(){
 async function hashPath(p){ const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p)); return [...new Uint8Array(d)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join(''); }
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== CACHE && k.startsWith('enc-')) await caches.delete(k); await self.clients.claim(); })()));
-self.addEventListener('message', e => { if (e.data === 'reload-key'){ KEY = null; } });
+self.addEventListener('message', e => { if (e.data === 'reload-key'){ KEY = null; last = {url: '', buf: null, tag: ''}; } });
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return; const u = new URL(req.url); if (u.origin !== location.origin || !u.pathname.startsWith(BASE)) return;
   let p; try { p = decodeURIComponent(u.pathname.slice(BASE.length)); } catch (x) { return; } if (!p || p.endsWith('/')) p += 'index.html'; if (BYPASS.test(p)) return;

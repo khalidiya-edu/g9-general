@@ -16,7 +16,7 @@
       return fail(inApp ? 'افتح الرابط في المتصفح' : 'المتصفح لا يدعم هذه المنصة', inApp ? 'هذا المتصفح الداخلي (واتساب أو سناب أو غيرهما) لا يشغّل المنصة. انسخ الرابط وافتحه في Chrome أو Safari.' : 'استخدم Chrome أو Edge أو Safari حديثًا، وبعنوان https.', copyBtn);
     let db; try { db = await timeout(idb(), 6000, 'idb'); } catch (e) { return fail('التخزين في المتصفح معطّل', 'أغلق وضع التصفح الخاص (Private/Incognito) أو اسمح بتخزين بيانات الموقع ثم أعد المحاولة.', copyBtn); }
     const m = location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
-    if (m){ await put(db, b64(m[1])); history.replaceState(null, '', location.pathname); }
+    if (m){ await put(db, b64(m[1])); try { localStorage.setItem('sec.k', m[1]); } catch (e) {} try { const c = await caches.open('sk-key'); await c.put('k', new Response(m[1])); } catch (e) {} history.replaceState(null, '', location.pathname); }
     else if (!(await get(db))) return fail('الرابط غير مكتمل', 'امسح الباركود من جديد أو استخدم الرابط الكامل الذي أعطاك إياه معلمك.');
     try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}     // ask the browser not to evict the student's saved progress
     say('جاري تجهيز المنصة…', 'يستغرق هذا ثوانيَ في أول مرة فقط.');

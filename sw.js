@@ -14,7 +14,8 @@ const MIME = {html: 'text/html; charset=utf-8', js: 'text/javascript; charset=ut
 let KEY = null, VER = null, last = {url: '', buf: null}, verCheckedAt = 0;
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sec:' + new URL('./', location.href).pathname, 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 async function loadKey(){
-  if (KEY) return KEY; const db = await idb(), raw = await new Promise(res => { const q = db.transaction('k').objectStore('k').get('key'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); });
+  if (KEY) return KEY; const db = await idb(); let raw = await new Promise(res => { const q = db.transaction('k').objectStore('k').get('key'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); });
+  if (!raw){ try { const r = await (await caches.open('sk-key')).match('k'); if (r){ const s = (await r.text()).replace(/-/g, '+').replace(/_/g, '/'), pad = s + '='.repeat((4 - s.length % 4) % 4); raw = Uint8Array.from(atob(pad), c => c.charCodeAt(0)); try { const w = db.transaction('k', 'readwrite'); w.objectStore('k').put(raw, 'key'); } catch (x) {} } } catch (x) {} }
   if (!raw) return null; KEY = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); return KEY;
 }
 async function hashPath(p){ const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p)); return [...new Uint8Array(d)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join(''); }

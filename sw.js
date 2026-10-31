@@ -6,7 +6,7 @@
    - every network request has a timeout and 2 retries; if nothing is reachable the student gets a clear page, never an endless spinner;
    - text files are gzipped before encryption (about 5x smaller downloads); ciphertext is cached per build, plain bytes only live in memory. */
 const BASE = new URL(self.registration.scope).pathname, META = 'enc-meta';
-const BYPASS = /^(go\.html|sw\.js|boot\.js|404\.html|v\.txt|enc\/)/;
+const BYPASS = /^(go\.html|sw\.js|boot\.js|404\.html|v\.txt|enc\/|pages\/|sources\/)/;   // pages/ and sources/ are published open: the host serves them directly
 const ZEXT = new Set(['js', 'css', 'html', 'json', 'svg', 'txt']);
 const MIME = {html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
   woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', mp3: 'audio/mpeg', mp4: 'video/mp4', pdf: 'application/pdf', txt: 'text/plain; charset=utf-8', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -48,7 +48,7 @@ async function cipher(p){
   let r = await cache.match(url); if (r) return {url, b: await r.arrayBuffer()};                    // already downloaded in this build: no network at all
   let err = null;
   for (let i = 0; i < 3; i++){
-    try { r = await net(url, {cache: 'no-cache'}, 25000 + i * 15000); if (r.status === 404) return {url, b: 404}; if (r.ok){ const b = await r.arrayBuffer(); cache.put(url, new Response(b.slice(0), {headers: {'Content-Type': 'application/octet-stream'}})).catch(() => {}); return {url, b}; } err = r.status; }
+    try { r = await net(url, {cache: 'no-cache'}, 25000 + i * 15000); if (r.status === 404){ if (i < 1){ await sleep(900); continue; } return {url, b: 404}; } if (r.ok){ const b = await r.arrayBuffer(); cache.put(url, new Response(b.slice(0), {headers: {'Content-Type': 'application/octet-stream'}})).catch(() => {}); return {url, b}; } err = r.status; }
     catch (x) { err = x; }
     await sleep(500 * (i + 1));
   }
@@ -67,7 +67,10 @@ const page = (t, m, s) => new Response('<!doctype html><meta charset="utf-8"><me
 async function serve(req, p){
   if (req.mode === 'navigate') await checkVersion(true); else await checkVersion(false);
   const buf = await plain(p);
-  if (buf === null) return fetch(req);                       // no key yet: the plain page of the host (go.html explains)
+  if (buf === null){                                           // no key in this browser: never show the host's bare «HTTP 404» (the files only exist encrypted)
+    if (p === 'index.html') return fetch(req);                 // the plain entry page of the host (go.html explains)
+    return req.mode === 'navigate' ? page('افتح رابط الفصل من جديد', 'المفتاح غير محفوظ في هذا المتصفح (ربما مُسحت بيانات الموقع). افتح الرابط الكامل الذي أعطاك إياه معلمك أو امسح الباركود مرة واحدة فقط.', 401) : new Response('No key', {status: 401});
+  }
   if (typeof buf === 'number'){
     const nav = req.mode === 'navigate';
     if (buf === 404) return nav ? page('الصفحة غير موجودة', 'ارجع إلى الرئيسية.', 404) : new Response('Not found', {status: 404});
